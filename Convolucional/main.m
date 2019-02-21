@@ -1,6 +1,6 @@
 F = funciones();
-cant_simb=8000;
-it=5;
+cant_simb=1000;
+it=3;
 SNR = zeros(1,it);
 BER = zeros(1,it);
 for i=1:1:it
@@ -8,4 +8,5 @@ for i=1:1:it
     B = F.entrada(cant_simb); 
     X = F.encoderConv(B);
     Y = F.ruido(X,length(X),i);
+    Z = F.viterbi(Y);
 end

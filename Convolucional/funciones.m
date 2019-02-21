@@ -29,29 +29,28 @@ se van guardan columna por columna.
 El primer valor de la columna es "x2j-1" y el segundo "x2j".
 Los valores de la memoria son: mem(1) = bj-1 y mem(2) = bj-2.
 %}
-function X = encoderConv(B)
+function x = encoderConv(b)
     mem = [1,1];
-    for i=1:1:length(B)
-        temp = calculo(B(i), mem(1), mem(2));
-        X(1,i)=temp(1);
-        X(2,i)=temp(2);
+    for i=1:1:length(b)
+        temp = calculo(b(i), mem(1), mem(2));
+        x(1,i)=temp(1);
+        x(2,i)=temp(2);
         mem(2) = mem(1);
-        mem(1) = B(i);
+        mem(1) = b(i);
     end
 end
 
 %{
 Comentario
 %}
-function Y = ruido(X, cant, SNR)
+function y = ruido(x, cant, SNR)
     temp=1/sqrt(2)*randn(1,cant*2);
     SNRv=10^(SNR/10)              
     No=1/SNRv                     
     temp=sqrt(No)*temp;                   
-    N = [temp(1:cant);temp(cant+1:end)];
-    Y = X + N;
+    n = [temp(1:cant);temp(cant+1:end)];
+    y = x + n;
 end
-
 
 function y = viterbi()
     y = 1;

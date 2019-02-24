@@ -14,8 +14,7 @@ function b = entrada(cant)
 end
 
 %{
-Cálculo que realiza el encoder por cada símbolo b0, que produce una salida x1,x2.
-La salida es un vector columna.
+Cálculo que realiza el encoder por cada símbolo b0, que produce una salida x.
 %}
 function x = calculo(b0,b1,b2)
     x = 0.2*b0+b1+0.3*b2;
@@ -23,14 +22,13 @@ end
 
 %{
 El vector mem guarda los valores de las memorias. Inicialmente se setean por defecto en [1,1].
-temp es un vector que guarda las salidas temporalmente y luego se asignan a la matriz X, donde
-se van guardan columna por columna. 
-El primer valor de la columna es "x2j-1" y el segundo "x2j".
+Para cada entrada b corresponde un valor de salida x.
 Los valores de la memoria son: mem(1) = bj-1 y mem(2) = bj-2.
 %}
 function x = detOpt(b)
     mem = [1,1];
     n = length(b);
+
     for i=1:1:n
         x(i) = calculo(b(i), mem(1), mem(2));
         mem(2) = mem(1);
@@ -39,7 +37,7 @@ function x = detOpt(b)
 end
 
 %{
-Comentario
+Adición de ruido al vector de salida del detOpt.
 %}
 function y = ruido(x, cant, SNR)
     n=1/sqrt(2)*randn(1,cant);
@@ -49,48 +47,40 @@ function y = ruido(x, cant, SNR)
     y = x + n;
 end
 
-
-function Z = viterbi(Y)
-    TRUNK = 20;                 
-    N = 4;                      %Estados
-    simbolos = length(Y);
+function Z = viterbi(Y, cant_simb, cant_est, ventana)
     inf= 9e99;
-    %DETECCION
-    v_costos = inf*ones(N,2);
+    v_costos = inf*ones(cant_est,2);
     v_costos(1,1)=0;
-    m_path = inf*ones(N,N);
-    m_state = inf*ones(N,1);
+    m_path = inf*ones(cant_est,cant_est);
+    m_state = inf*ones(cant_est,1);
     k=0;
-    for j = 1:1:simbolos
 
-        %Calcular caminos
+    for j = 1:1:cant_simb
         m_path = calcularCaminos(v_costos, Y(j));
-
         [v_costos, v_state] = elegirCamino(v_costos, m_path);
-
         m_state =  [m_state, v_state];
+
         if j ==1
             m_state = m_state(:,2);
         end
 
-        if length(m_state) >=TRUNK
+        if length(m_state) >=ventana
             k=k+1;
             [Z(k), m_state]=tracebackSimple(m_state, v_costos(:,2));
-
         end
 
-        v_costos = [v_costos(:,2) , inf*ones(N,1)];     %%Avanza en la matriz de costos
-        m_path = inf*ones(N,N);
+        v_costos = [v_costos(:,2) , inf*ones(cant_est,1)];  
+        m_path = inf*ones(cant_est,cant_est);
     end
 
     T = tracebackFull(m_state, v_costos(:,1));
+
     if isempty(Z)
         Z =  T;
     else
         Z = [Z T];
     end
 end
-
 
 function path = calcularCaminos(costos, y)
     inf=9e99;
@@ -108,7 +98,9 @@ function path = calcularCaminos(costos, y)
     end
 end
 
-
+%{
+Recibe un índice y devuelve un estado.
+%}
 function E = estado(e)
     switch e
         case 1
@@ -124,9 +116,11 @@ function E = estado(e)
     end
 end
 
-
+%{
+Recibe un índice y un valor de entrada. Devuelve un índice
+correspondiente al estado de salida.
+%}
 function nextE = proximoEstado(e, s)
-
     if s== 1
         switch e
             case 1
@@ -154,13 +148,13 @@ function nextE = proximoEstado(e, s)
     end
 end
 
-
+%{
+Utiliza el concepto de mínima distancia para el cálculo de la métrica de rama.
+%}
 function costo = costoRama(e,s,y)
-
     E = estado(e);
     c = calculo(s,E(1),E(2));
     costo = abs(y-c);
-
 end
 
 
@@ -168,6 +162,7 @@ function [v_costos, state] = elegirCamino(v_costos, path)
     inf=9e99;
     state = zeros(4,1);
     v_costos(:,2)= inf*ones(4,1);
+    
     for e2 = 1:1:4
         minCost=inf;
         ePrev=0;
@@ -187,9 +182,7 @@ end
 
 
 function [S , m_state] = tracebackSimple(m_state, v_costos)
-
     L = length(m_state);
-
     [m, ind] = min(v_costos);
     e2= ind;
     e1= m_state(e2,L);
@@ -201,20 +194,18 @@ function [S , m_state] = tracebackSimple(m_state, v_costos)
 
     E = estado(e2);
     S = E(1);
-    m_state = m_state(:,2:end);   %Elimina la primer columna, simula desplazamiento de ventana
-
+    m_state = m_state(:,2:end);
 end
 
 
 function [S] = tracebackFull(m_state, v_costos)
-
     L = length(m_state);
-
     [m, ind] = min(v_costos);
     e2= ind;
     e1= m_state(e2,L);
     E = estado(e2);
     S = E(1);
+
     for i = L-1:-1:1
         e2 = e1;
         e1= m_state(e2,i);
@@ -223,11 +214,14 @@ function [S] = tracebackFull(m_state, v_costos)
     end
 end
 
+%{
+Recibe dos vectores (SNR y BER) y grafica.
+%}
 function graficar(SNR, BER)
     figure
     semilogy(SNR,BER,'-o')
     grid on
-    title('BER vs SNR - Codificado')
+    title('BER vs SNR')
     xlabel('SNR (dB)')
     ylabel('BER')
 end

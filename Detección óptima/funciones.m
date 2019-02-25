@@ -21,7 +21,8 @@ function x = calculo(b0,b1,b2)
 end
 
 %{
-El vector mem guarda los valores de las memorias. Inicialmente se setean por defecto en [1,1].
+El vector mem guarda los valores de las memorias. Inicialmente se setean 
+por defecto en [1,1].
 Para cada entrada b corresponde un valor de salida x.
 Los valores de la memoria son: mem(1) = bj-1 y mem(2) = bj-2.
 %}
@@ -47,6 +48,18 @@ function y = ruido(x, cant, SNR)
     y = x + n;
 end
 
+%{
+La salida del algoritmo pretende ser un vector igual al que ingreso al encoder.
+En la primera iteración no hay estado previo, entonces limpia lo que sale de 
+v_state.
+Luego si la matriz m_state, donde se van guardando todos los estados previos,
+Supera el tamaño de la ventana comienza a decodificar el primer valor, reduciendo
+el tamaño de la matriz m_path.
+Luego mueve la segunda columna de la matriz v_costo a la primera (esta columna
+se va actualizando en la función elegirCamino) y limpia la matriz m_path.
+Cuando la matriz m_state no supera el tamaño de la ventana se realiza el traceback
+completo de toda esa matriz.
+%}
 function Z = viterbi(Y, cant_simb, cant_est, ventana)
     inf= 9e99;
     v_costos = inf*ones(cant_est,2);
@@ -82,6 +95,14 @@ function Z = viterbi(Y, cant_simb, cant_est, ventana)
     end
 end
 
+%{
+Observa en la primera columna de la matriz costos si algún valor es menor a inf 
+(inicialmente el 1,1), para comenzar el proceso desde algún estado. 
+Luego calcula el costo hacia los próximos estados partiendo del estado representado
+por el índice e1.
+El costo lo guarda en una matriz path donde representa con las filas el estado 
+inicial y con las columnas el estado final.
+%}
 function path = calcularCaminos(costos, y)
     inf=9e99;
     path = inf*ones(4,4);
@@ -149,7 +170,8 @@ function nextE = proximoEstado(e, s)
 end
 
 %{
-Utiliza el concepto de mínima distancia para el cálculo de la métrica de rama.
+Utiliza el concepto de mínima distancia para el cálculo de la métrica de 
+rama.
 %}
 function costo = costoRama(e,s,y)
     E = estado(e);
@@ -157,7 +179,14 @@ function costo = costoRama(e,s,y)
     costo = abs(y-c);
 end
 
-
+%{
+Va recorriendo por columna la matriz path recibida desde viterbi. Si el valor es 
+menor que infinito, guarda en camino el costo en guardado en la primera 
+columna de v_costos más el valor de la matriz path, actualiza la varable minCost 
+y guarda el estado previo.
+Antes de continuar con la siguiente columna guarda el menor costo y el estado previo 
+en la segunda columna de la matriz v_costos.
+%}
 function [v_costos, state] = elegirCamino(v_costos, path)
     inf=9e99;
     state = zeros(4,1);
@@ -180,7 +209,15 @@ function [v_costos, state] = elegirCamino(v_costos, path)
     end
 end
 
-
+%{
+Toma la matriz de costos y busca el valor mínimo, toma ese índice y se ubica 
+en la última columna de la matriz de estados. Esto indica que desde e1 se llegó 
+a e2.
+Luego mediante un for realiza los mismos pasos yendo hacia el comienzo de la matriz,
+Nuevamente indica que desde e1 se llegó a e2. El valor que entra para que de e1 se 
+pase a e2 es el primer valor de e2. Es decir el que se guarda en S.
+Luego se elimina la primer fila de m_state.
+%}
 function [S , m_state] = tracebackSimple(m_state, v_costos)
     L = length(m_state);
     [m, ind] = min(v_costos);
@@ -197,7 +234,10 @@ function [S , m_state] = tracebackSimple(m_state, v_costos)
     m_state = m_state(:,2:end);
 end
 
-
+%{
+Muy similar al caso anterior, pero ahora se guardan todos los valores provocan se
+pase de un estado al siguiente.
+%}
 function [S] = tracebackFull(m_state, v_costos)
     L = length(m_state);
     [m, ind] = min(v_costos);
